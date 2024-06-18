@@ -27,36 +27,24 @@ if (!existsSync(videoPath)) {
 
 let browser = null;
 
-//enter the npo start show name and download all episodes from all seasons.
-//second parameter = season count (0 = all)
-//third parameter = reverse seasons (false = Start from latest, true = Start from first)
+// enter the vtm go show name (from url) and download all episodes from the chosen season.
 
-// getAllEpisodesFromShow("keuringsdienst-van-waarde", 2, true).then((urls) => {
-//     getEpisodes(urls).then((result) => {
-//         console.log(result);
-//     });
-// });
-
-
-// enter the npo start show name and download all episodes from the chosen season.
-/*
-getAllEpisodesFromSeason("keuringsdienst-van-waarde", "seizoen-3").then((urls) => {
+getAllEpisodesFromSeason("milo~e38295bf-280c-43b5-a1d1-4e41904a367f", "seizoen-1").then((urls) => {
     getEpisodes(urls);
 });
-*/
 
-/*
-enter the video id here, you can find it in the url of the video, full url should look like this: https://www.npostart.nl/AT_300003151
-if the video ids are sequential you can use the second parameter to download multiple episodes
-*/
-
-// getEpisodesInOrder("AT_300003161", 1).then((result) => {
+// getEpisodes([
+//     "https://www.vtmgo.be/vtmgo/afspelen/adf9caa7-ee22-4608-a719-efef8c5ad27f",
+//     "https://www.vtmgo.be/vtmgo/afspelen/46023a39-ae3f-4536-a940-6ad9896f846d",
+//     "https://www.vtmgo.be/vtmgo/afspelen/99cbc73d-acaa-43b6-b208-b76978244418",
+//     "https://www.vtmgo.be/vtmgo/afspelen/3f9482eb-f0b4-4880-8bf3-90825d8bd723"
+// ]).then((result) => {
 //     console.log(result);
 // });
 
-getEpisode("https://www.vtmgo.be/vtmgo/afspelen/46023a39-ae3f-4536-a940-6ad9896f846d").then((result) => {
-    console.log(result);
-});
+// getEpisode("https://www.vtmgo.be/vtmgo/afspelen/46023a39-ae3f-4536-a940-6ad9896f846d").then((result) => {
+//     console.log(result);
+// });
 
 async function vtmLogin() {
     // check if browser is already running
@@ -109,101 +97,36 @@ async function getEpisode(url) {
     return downloadFromID(result);
 }
 
-// async function getEpisodesInOrder(firstId, episodeCount) {
-//     const index = firstId.lastIndexOf('_') + 1;
+async function getAllEpisodesFromSeason(show, season = 0) {
+    if (browser == null) {
+        browser = await launch({headless: false});
+    }
+    const page = await browser.newPage();
 
-//     const id = firstId.substring(index, firstId.length);
-//     let prefix = firstId.substring(0, index);
-//     // if id start with 0 add 0 to the prefix
-//     if (id.startsWith('0')) {
-//         prefix += '0';
-//     }
-//     const urls = [];
-//     for (let i = 0; i < episodeCount; i++) {
-//         const episodeId = prefix + (parseInt(id) + i);
-//         urls.push(`https://www.npostart.nl/${episodeId}`);
-//     }
-//     return getEpisodes(urls);
-// }
+    console.log(`${show} - ${season}`);
 
-// async function getAllEpisodesFromShow(show, seasonCount = 0, reverse = false) {
-//     if (browser == null) {
-//         browser = await launch({headless: false});
-//     }
-//     const page = await browser.newPage();
+    await page.goto(`https://www.vtmgo.be/vtmgo/${show}/${season}`);
 
-//     const urls = [];
+    await page.waitForSelector('>>> #pg-accept-btn');
+    await page.click('>>> #pg-accept-btn');
 
-//     await page.goto(`https://npo.nl/start/serie/${show}`);
+    await page.waitForSelector('x-swimlane__scroller[aria-label=\'Afleveringen\']');
+    const urls = await page.evaluate(() => {
+        let urllist = [];
+        document.querySelectorAll('x-swimlane__scroller[aria-label=\'Afleveringen\'] a').forEach(item => urllist.push(item.href));
+        return [...new Set(urllist)];
+    });
 
-//     const jsonData = await page.evaluate(() => {
-//         return JSON.parse(document.getElementById('__NEXT_DATA__').innerText) || null;
-//     });
+    if (urls === null) {
+        console.log('Error retrieving episode data');
+        return null;
+    }
 
-//     if (jsonData === null) {
-//         console.log('Error retrieving show data');
-//         return null;
-//     }
+    await browser.close();
+    browser = null;
 
-//     await page.close();
-
-//     const seasons = reverse
-//         ? jsonData['props']['pageProps']['dehydratedState']['queries'][1]['state']['data'].reverse()
-//         : jsonData['props']['pageProps']['dehydratedState']['queries'][1]['state']['data'];
-
-//     const seasonsLength = seasonCount !== 0 ? seasonCount : seasons.length;
-
-
-//     for (let i = 0; i < seasonsLength; i++) {
-//         let season = seasons[i]['slug'];
-//         console.log(season);
-//         let seasonUrls = await getAllEpisodesFromSeason(show, season, reverse);
-//         for (let x = 0; x < seasonUrls.length; x++) {
-//             console.log(seasonUrls[x]);
-//             urls.push(seasonUrls[x]);
-//         }
-//     }
-
-//     return urls;
-// }
-
-// async function getAllEpisodesFromSeason(show, season = 0, reverse = false) {
-//     if (browser == null) {
-//         browser = await launch({headless: false});
-//     }
-//     const page = await browser.newPage();
-
-//     const urls = [];
-
-//     console.log(`${show} - ${season}`);
-
-//     await page.goto(`https://npo.nl/start/serie/${show}/${season}`);
-//     await page.waitForSelector('div[data-testid=\'btn-login\']');
-//     const jsonData = await page.evaluate(() => {
-//         return JSON.parse(document.getElementById('__NEXT_DATA__').innerText) || null;
-//     });
-
-//     if (jsonData === null) {
-//         console.log('Error retrieving episode data');
-//         return null;
-//     }
-
-//     const episodes = reverse
-//         ? jsonData['props']['pageProps']['dehydratedState']['queries'][2]['state']['data'].reverse()
-//         : jsonData['props']['pageProps']['dehydratedState']['queries'][2]['state']['data'];
-
-//     for (let x = 0; x < episodes.length; x++) {
-//         let programKey = episodes[x]['programKey'];
-//         let slug = episodes[x]['slug'];
-//         let productId = episodes[x]['productId'];
-//         console.log(`ep. ${programKey} - ${slug} - ${productId}`);
-//         urls.push(`https://npo.nl/start/serie/${show}/${season}/${slug}/afspelen`);
-//     }
-
-//     await page.close();
-
-//     return urls;
-// }
+    return urls;
+}
 
 
 async function getEpisodes(urls) {
@@ -250,6 +173,12 @@ async function getInformation(url) {
                 return null;
             }
 
+            if(await page.$("div.error")) {
+                await page.close();
+                console.log('Error content probably needs VTM Go Plus subscription');
+                return null;
+            }
+
             // const iframe = await page.waitForSelector(`#iframe-${id}`);
             await page.waitForSelector(`.player__mediaElement`);
             const filename = await generateFileName(page);
@@ -283,13 +212,7 @@ async function getInformation(url) {
             let x_custom_data = "";
             try {
                 x_custom_data = streamData['video']['streams'][1]['drm']['com.widevine.alpha']['drmtoday']['authToken'] || "";
-            } catch (TypeError) {
-                const pageContent = await page.content();
-                if (pageContent.includes("Alleen te zien met NPO Plus")) {
-                    console.log('Error content needs NPO Plus subscription');
-                    return null;
-                }
-            }
+            } catch (TypeError) {}
 
             const mpdData = parser.parse(await (await mpdPromise).text());
 

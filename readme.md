@@ -1,6 +1,6 @@
-# Downloading from npo start
-this project makes it possible to download from npo start
-
+# Downloading from VTM GO
+this project makes it possible to download from VTM Go
+(this is a fork of [npo-dl](https://github.com/Ewoodss/npo-dl), and without it this project wouldn't exist!)
 
 ## the following files should be downloaded and added to your path
 
@@ -29,5 +29,7 @@ brew install yt-dlp
 ## the following environment variables are required
 
 - AUTH_KEY: this is a key from the website [getwvkeys](https://getwvkeys.cc) this is used for decrypting the video stream
-- NPO_EMAIL: this is the email address used to login to the npo website
-- NPO_PASSW: this is the password used to login to the npo website
+- VTM_EMAIL: this is the email address used to login to the VTM website
+- VTM_PASSW: this is the password used to login to the VTM website
+
+Both are dpg media credentials, if login fails please manually log in using the email code option

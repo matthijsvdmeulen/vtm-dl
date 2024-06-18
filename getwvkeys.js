@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 class getWvKeys {
-    constructor(pssh, licenseUrl, authKey, x_custom_data, apiUrl = "https://getwvkeys.cc/pywidevine", buildInfo = "", force = false, verbose = false) {
+    constructor(pssh, licenseUrl, authKey, x_custom_data, apiUrl = "https://getwvkeys.cc/pywidevine", buildInfo = "", force = true, verbose = false) {
         this.pssh = pssh;
         this.licenseUrl = licenseUrl;
         this.authKey = authKey;
@@ -15,7 +15,7 @@ class getWvKeys {
             "license_url": this.licenseUrl
         };
         this.headers = {"X-API-Key": this.authKey, "Content-Type": "application/json"};
-        this.headers["x-custom-data"] = x_custom_data;
+        this.headers["X-Dt-Auth-Token"] = x_custom_data;
         this.verbose = verbose;
     }
 
@@ -107,13 +107,16 @@ class getWvKeys {
     async getWvKeys() {
         let licenseData = await this.generate_request();
 
-        if (licenseData["cache"] === true)
-            return licenseData["keys"][0]['key'];
+        if (licenseData["cache"] === true) {
+            log("single key gotten from cache, not good enough for our needs");
+            return null
+            // return licenseData["keys"][0]['key'];
+        }
 
         let license_response = await this.post_request(licenseData["challenge"]);
         let decrypt_response = await this.decrypter(license_response);
 
-        return decrypt_response["keys"][0];
+        return decrypt_response["keys"];
     }
 
 

@@ -12,12 +12,12 @@ const options = {
 };
 const parser = new XMLParser(options);
 
-const WidevineProxyUrl = 'https://npo-drm-gateway.samgcloud.nepworldwide.nl/authentication';
+const WidevineProxyUrl = 'https://lic.drmtoday.com/license-proxy-widevine/cenc/?specConform=true';
 
 //set as environment variable or replace with your own key
 const authKey = process.env.AUTH_KEY || "";
-const email = process.env.NPO_EMAIL || "";
-const password = process.env.NPO_PASSW || "";
+const email = process.env.VTM_EMAIL || "";
+const password = process.env.VTM_PASSW || "";
 const videoPath = resolve("./videos") + "/";
 
 if (!existsSync(videoPath)) {
@@ -54,11 +54,11 @@ if the video ids are sequential you can use the second parameter to download mul
 //     console.log(result);
 // });
 
-getEpisode("https://npo.nl/start/serie/flikken-maastricht/seizoen-11/undercover_1/afspelen").then((result) => {
-   console.log(result);
+getEpisode("https://www.vtmgo.be/vtmgo/afspelen/46023a39-ae3f-4536-a940-6ad9896f846d").then((result) => {
+    console.log(result);
 });
 
-async function npoLogin() {
+async function vtmLogin() {
     // check if browser is already running
     if (browser === null) {
         browser = await launch({headless: false});
@@ -67,21 +67,29 @@ async function npoLogin() {
     console.log('Running tests..');
     const page = await browser.newPage();
 
-    await page.goto('https://npo.nl/start');
+    await page.goto('https://www.vtmgo.be/vtmgo');
 
-    await page.waitForSelector('div[data-testid=\'btn-login\']');
-    await page.click('div[data-testid=\'btn-login\']');
+    await sleep(500);
+    await page.waitForSelector('>>> #pg-accept-btn');
+    await page.click('>>> #pg-accept-btn');
 
-    await page.waitForSelector('#EmailAddress');
-    await page.$eval('#EmailAddress', (el, secret) => el.value = secret, email);
-    await page.$eval('#Password', (el, secret) => el.value = secret, password);
+    await page.waitForSelector('label[for=\'user-dropdown-trigger-mobile\']');
+    await page.click('label[for=\'user-dropdown-trigger-mobile\']');
 
-    await sleep(1000);
-    await page.waitForSelector('button[value=\'login\']');
-    await page.click('button[value=\'login\']');
+    await page.waitForSelector('.user-dropdown__item a[js-module=\'loginRedirect\']');
+    await page.click('.user-dropdown__item a[js-module=\'loginRedirect\']');
 
-    await page.waitForSelector('button[class=\'group w-full cursor-pointer\']');
-    await page.click('button[class=\'group w-full cursor-pointer\']');
+    await page.waitForSelector('#username');
+    await page.$eval('#username', (el, secret) => el.value = secret, email);
+    await sleep(500);
+    await page.waitForSelector('button[type=\'submit\']');
+    await page.click('button[type=\'submit\']');
+
+    await page.waitForSelector('#password');
+    await page.$eval('#password', (el, secret) => el.value = secret, password);
+    await sleep(500);
+    await page.waitForSelector('button[type=\'submit\']');
+    await page.click('button[type=\'submit\']');
 
     try {
         await page.waitForNetworkIdle();
@@ -94,116 +102,116 @@ async function npoLogin() {
 }
 
 async function getEpisode(url) {
-    const promiseLogin = npoLogin();
+    const promiseLogin = vtmLogin();
     await promiseLogin;
     const result = await getInformation(url);
     await browser.close();
     return downloadFromID(result);
 }
 
-async function getEpisodesInOrder(firstId, episodeCount) {
-    const index = firstId.lastIndexOf('_') + 1;
+// async function getEpisodesInOrder(firstId, episodeCount) {
+//     const index = firstId.lastIndexOf('_') + 1;
 
-    const id = firstId.substring(index, firstId.length);
-    let prefix = firstId.substring(0, index);
-    // if id start with 0 add 0 to the prefix
-    if (id.startsWith('0')) {
-        prefix += '0';
-    }
-    const urls = [];
-    for (let i = 0; i < episodeCount; i++) {
-        const episodeId = prefix + (parseInt(id) + i);
-        urls.push(`https://www.npostart.nl/${episodeId}`);
-    }
-    return getEpisodes(urls);
-}
+//     const id = firstId.substring(index, firstId.length);
+//     let prefix = firstId.substring(0, index);
+//     // if id start with 0 add 0 to the prefix
+//     if (id.startsWith('0')) {
+//         prefix += '0';
+//     }
+//     const urls = [];
+//     for (let i = 0; i < episodeCount; i++) {
+//         const episodeId = prefix + (parseInt(id) + i);
+//         urls.push(`https://www.npostart.nl/${episodeId}`);
+//     }
+//     return getEpisodes(urls);
+// }
 
-async function getAllEpisodesFromShow(show, seasonCount = 0, reverse = false) {
-    if (browser == null) {
-        browser = await launch({headless: false});
-    }
-    const page = await browser.newPage();
+// async function getAllEpisodesFromShow(show, seasonCount = 0, reverse = false) {
+//     if (browser == null) {
+//         browser = await launch({headless: false});
+//     }
+//     const page = await browser.newPage();
 
-    const urls = [];
+//     const urls = [];
 
-    await page.goto(`https://npo.nl/start/serie/${show}`);
+//     await page.goto(`https://npo.nl/start/serie/${show}`);
 
-    const jsonData = await page.evaluate(() => {
-        return JSON.parse(document.getElementById('__NEXT_DATA__').innerText) || null;
-    });
+//     const jsonData = await page.evaluate(() => {
+//         return JSON.parse(document.getElementById('__NEXT_DATA__').innerText) || null;
+//     });
 
-    if (jsonData === null) {
-        console.log('Error retrieving show data');
-        return null;
-    }
+//     if (jsonData === null) {
+//         console.log('Error retrieving show data');
+//         return null;
+//     }
 
-    await page.close();
+//     await page.close();
 
-    const seasons = reverse
-        ? jsonData['props']['pageProps']['dehydratedState']['queries'][1]['state']['data'].reverse()
-        : jsonData['props']['pageProps']['dehydratedState']['queries'][1]['state']['data'];
+//     const seasons = reverse
+//         ? jsonData['props']['pageProps']['dehydratedState']['queries'][1]['state']['data'].reverse()
+//         : jsonData['props']['pageProps']['dehydratedState']['queries'][1]['state']['data'];
 
-    const seasonsLength = seasonCount !== 0 ? seasonCount : seasons.length;
+//     const seasonsLength = seasonCount !== 0 ? seasonCount : seasons.length;
 
 
-    for (let i = 0; i < seasonsLength; i++) {
-        let season = seasons[i]['slug'];
-        console.log(season);
-        let seasonUrls = await getAllEpisodesFromSeason(show, season, reverse);
-        for (let x = 0; x < seasonUrls.length; x++) {
-            console.log(seasonUrls[x]);
-            urls.push(seasonUrls[x]);
-        }
-    }
+//     for (let i = 0; i < seasonsLength; i++) {
+//         let season = seasons[i]['slug'];
+//         console.log(season);
+//         let seasonUrls = await getAllEpisodesFromSeason(show, season, reverse);
+//         for (let x = 0; x < seasonUrls.length; x++) {
+//             console.log(seasonUrls[x]);
+//             urls.push(seasonUrls[x]);
+//         }
+//     }
 
-    return urls;
-}
+//     return urls;
+// }
 
-async function getAllEpisodesFromSeason(show, season = 0, reverse = false) {
-    if (browser == null) {
-        browser = await launch({headless: false});
-    }
-    const page = await browser.newPage();
+// async function getAllEpisodesFromSeason(show, season = 0, reverse = false) {
+//     if (browser == null) {
+//         browser = await launch({headless: false});
+//     }
+//     const page = await browser.newPage();
 
-    const urls = [];
+//     const urls = [];
 
-    console.log(`${show} - ${season}`);
+//     console.log(`${show} - ${season}`);
 
-    await page.goto(`https://npo.nl/start/serie/${show}/${season}`);
-    await page.waitForSelector('div[data-testid=\'btn-login\']');
-    const jsonData = await page.evaluate(() => {
-        return JSON.parse(document.getElementById('__NEXT_DATA__').innerText) || null;
-    });
+//     await page.goto(`https://npo.nl/start/serie/${show}/${season}`);
+//     await page.waitForSelector('div[data-testid=\'btn-login\']');
+//     const jsonData = await page.evaluate(() => {
+//         return JSON.parse(document.getElementById('__NEXT_DATA__').innerText) || null;
+//     });
 
-    if (jsonData === null) {
-        console.log('Error retrieving episode data');
-        return null;
-    }
+//     if (jsonData === null) {
+//         console.log('Error retrieving episode data');
+//         return null;
+//     }
 
-    const episodes = reverse
-        ? jsonData['props']['pageProps']['dehydratedState']['queries'][2]['state']['data'].reverse()
-        : jsonData['props']['pageProps']['dehydratedState']['queries'][2]['state']['data'];
+//     const episodes = reverse
+//         ? jsonData['props']['pageProps']['dehydratedState']['queries'][2]['state']['data'].reverse()
+//         : jsonData['props']['pageProps']['dehydratedState']['queries'][2]['state']['data'];
 
-    for (let x = 0; x < episodes.length; x++) {
-        let programKey = episodes[x]['programKey'];
-        let slug = episodes[x]['slug'];
-        let productId = episodes[x]['productId'];
-        console.log(`ep. ${programKey} - ${slug} - ${productId}`);
-        urls.push(`https://npo.nl/start/serie/${show}/${season}/${slug}/afspelen`);
-    }
+//     for (let x = 0; x < episodes.length; x++) {
+//         let programKey = episodes[x]['programKey'];
+//         let slug = episodes[x]['slug'];
+//         let productId = episodes[x]['productId'];
+//         console.log(`ep. ${programKey} - ${slug} - ${productId}`);
+//         urls.push(`https://npo.nl/start/serie/${show}/${season}/${slug}/afspelen`);
+//     }
 
-    await page.close();
+//     await page.close();
 
-    return urls;
-}
+//     return urls;
+// }
 
 
 async function getEpisodes(urls) {
-    const promiseLogin = npoLogin();
+    const promiseLogin = vtmLogin();
     let informationList = [];
     await promiseLogin;
-    for (const npo_url of urls) {
-        informationList.push(getInformation(npo_url));
+    for (const vtm_url of urls) {
+        informationList.push(getInformation(vtm_url));
     }
 
     const list = await Promise.all(informationList);
@@ -236,14 +244,14 @@ async function getInformation(url) {
             const page = await browser.newPage();
 
             await page.goto(url);
-            if (page.url() === "https://npo.nl/start") {
+            if (page.url() === "https://www.vtmgo.be/vtmgo") {
                 await page.close();
                 console.log(`Error wrong episode ID ${url}`);
                 return null;
             }
 
             // const iframe = await page.waitForSelector(`#iframe-${id}`);
-            await page.waitForSelector(`.bmpui-image`);
+            await page.waitForSelector(`.player__mediaElement`);
             const filename = await generateFileName(page);
 
             console.log(`${filename} - ${url}`);
@@ -256,14 +264,14 @@ async function getInformation(url) {
             }
 
             const mpdPromise = page.waitForResponse((response) => {
-                if (response.url().endsWith('.mpd')) {
+                if (response.url().includes('.mpd')) {
                     return response;
                 }
             });
 
             // wait for post request that ends with 'stream-link'
             const streamResponsePromise = page.waitForResponse((response) => {
-                if (response.url().endsWith('stream-link') && response.request().method() === 'POST') {
+                if (response.url().includes('play-config') && response.request().method() === 'POST') {
                     return response;
                 }
             });
@@ -274,7 +282,7 @@ async function getInformation(url) {
 
             let x_custom_data = "";
             try {
-                x_custom_data = streamData['stream']['drmToken'] || "";
+                x_custom_data = streamData['video']['streams'][1]['drm']['com.widevine.alpha']['drmtoday']['authToken'] || "";
             } catch (TypeError) {
                 const pageContent = await page.content();
                 if (pageContent.includes("Alleen te zien met NPO Plus")) {
@@ -286,22 +294,38 @@ async function getInformation(url) {
             const mpdData = parser.parse(await (await mpdPromise).text());
 
             let pssh = "";
+            let vidkid = "";
+            let audkid = "";
             // check if the mpdData contains the necessary information
-            if ('ContentProtection' in mpdData["MPD"]["Period"]["AdaptationSet"][1]) {
-                pssh = mpdData["MPD"]["Period"]["AdaptationSet"][1]["ContentProtection"][3].pssh || "";
+            if ('ContentProtection' in mpdData["MPD"]["Period"]["AdaptationSet"][0]["Representation"]) {
+                pssh = mpdData["MPD"]["Period"]["AdaptationSet"][0]["Representation"]["ContentProtection"][1].pssh || "";
+                mpdData["MPD"]["Period"]["AdaptationSet"].forEach(set => {
+                    try {
+                        if(set["Representation"]["@_height"] === "1080") {
+                            vidkid = set["Representation"]["ContentProtection"][0]["@_default_KID"].trim().replaceAll('-', '').toLowerCase();
+                        }
+                    } catch(e) {};
+                    try {
+                        if(set["Label"] === "Stereo") {
+                            audkid = set["Representation"]["ContentProtection"][0]["@_default_KID"].trim().replaceAll('-', '').toLowerCase();
+                        }
+                    } catch(e) {};
+                });
             }
 
             const information = {
                 "filename": filename,
                 "pssh": pssh,
+                "vidkid": vidkid,
+                "audkid": audkid,
                 "x_custom_data": x_custom_data,
-                "mpdUrl": streamData['stream']['streamURL'],
+                "mpdUrl": streamData['video']['streams'][1]['url'],
                 "wideVineKeyResponse": null
             };
 
             //if pssh and x_custom_data are not empty, get the keys
             if (pssh.length !== 0 && x_custom_data.length !== 0) {
-                information.wideVineKeyResponse = ((await getWVKeys(pssh, x_custom_data)).trim());
+                information.wideVineKeyResponse = ((await getWVKeys(pssh, x_custom_data)));
             } else {
                 console.log('probably no drm');
             }
@@ -376,43 +400,34 @@ async function downloadFromID(information) {
 
     console.log(filename);
 
-    let key = null;
+    let keys = null;
 
     if (information.wideVineKeyResponse !== null) {
-        key = information.wideVineKeyResponse.toString();
+        keys = information.wideVineKeyResponse;
     }
 
-    return await decryptFiles(filename, key);
+    return await decryptFiles(filename, keys, information.vidkid, information.audkid);
 }
 
 
-async function decryptFiles(filename, key) {
+async function decryptFiles(filename, keys, vidkid, audkid) {
     //console.log(videoPath);
     let encryptedFilename = 'encrypted#' + filename;
 
     const mp4File = videoPath + encryptedFilename + '.mp4';
     const m4aFile = videoPath + encryptedFilename + '.m4a';
 
-    //if key is none then file probably not encrypted
-    let [mp4DecryptedFile, m4aDecryptedFile] = [mp4File, m4aFile];
-
-    // if (key != null) {
-    //     const mp4Decrypted = mp4Decrypt(mp4File, key);
-    //     const m4aDecrypted = mp4Decrypt(m4aFile, key);
-    //     [mp4DecryptedFile, m4aDecryptedFile] = await Promise.all([mp4Decrypted, m4aDecrypted]);
-    // }
-    if (key != null) {
-        key = key.split(':')[1];
+    let newkeys = {};
+    if (keys != null) {
+        keys.forEach(key => newkeys[key.split(':')[0]] = key.split(':')[1]);
     }
-    const resultFileName = await combineVideoAndAudio(filename, mp4DecryptedFile, m4aDecryptedFile, key);
+    const resultFileName = await combineVideoAndAudio(filename, mp4File, m4aFile, newkeys, vidkid, audkid);
 
     await sleep(1000);
 
     if (await fileExists(resultFileName)) {
         await deleteFile(mp4File);
         await deleteFile(m4aFile);
-        await deleteFile(mp4DecryptedFile);
-        await deleteFile(m4aDecryptedFile);
     }
 
     return resultFileName;
@@ -441,11 +456,11 @@ async function runCommand(command, args, result) {
     });
 }
 
-async function combineVideoAndAudio(filename, video, audio, key) {
+async function combineVideoAndAudio(filename, video, audio, keys, vidkid, audkid) {
     const combinedFileName = videoPath + filename + '.mkv';
     let args = ['-i', video, '-i', audio, '-c', 'copy', combinedFileName];
-    if (key != null) {
-        args = ['-decryption_key', key, '-i', video, '-decryption_key', key, '-i', audio, '-c', 'copy', combinedFileName];
+    if (keys != null) {
+        args = ['-decryption_key', keys[vidkid], '-i', video, '-decryption_key', keys[audkid], '-i', audio, '-c', 'copy', combinedFileName];
     }
     return runCommand('ffmpeg', args, combinedFileName);
 }
@@ -472,19 +487,10 @@ function getWVKeys(pssh, x_custom_data) {
 }
 
 async function generateFileName(page) {
-    const rawSerie = page.$eval('.font-bold.font-npo-scandia.leading-130.text-30 .line-clamp-2', el => el["innerText"]);
-    const rawTitle = page.$eval('h2.font-bold.font-npo-scandia.leading-130.text-22', el => el["innerText"]);
-    const rawNumber = page.$eval('.mb-24 .flex.items-center .leading-130.text-13 .line-clamp-1', el => el["innerText"]);
-    const rawSeason = page.$eval('.bg-card-3.font-bold.font-npo-scandia.inline-flex.items-center', el => el["innerText"]);
+    const rawTitle = page.$eval('h1.lfvp-player__title', el => el["innerText"]);
 
     let filename = "";
 
-    filename += (await rawSerie) + " - ";
-    // remove word "Seizoen" from rawSeason
-    const seasonNumber = parseInt((await rawSeason).replace("Seizoen ", ""));
-    const episodeNumber = parseInt((await rawNumber).replace("Afl. ", "").split("•")[0]);
-    // add season and episode number to filename formatted as SxxExx
-    filename += "S" + seasonNumber.toString().padStart(2, '0') + "E" + episodeNumber.toString().padStart(2, '0') + " - ";
     filename += (await rawTitle);
 
     // remove illegal characters from filename
@@ -499,11 +505,3 @@ const fileExists = async path => !!(await promises.stat(path).catch(() => false)
 const sleep = (milliseconds) => {
     return new Promise(success => setTimeout(success, milliseconds));
 };
-
-
-
-
-
-
-
-
